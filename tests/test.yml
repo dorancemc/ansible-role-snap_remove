@@ -2,4 +2,4 @@
 
 - hosts: all
   roles:
-    - { role: ../ansible-snaps }
+    - { role: ../ansible-role-snaps_remove }
