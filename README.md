@@ -40,7 +40,7 @@ Test
 ----
 
 ```bash
-ansible-playbook -u vagrant -i 192.168.243.219, tests/test.yml --syntax-check
+ANSIBLE_ROLES_PATH=../ ansible-playbook -u vagrant -i 192.168.243.219, tests/test.yml --syntax-check
 ```
 
 License
