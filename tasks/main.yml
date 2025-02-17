@@ -3,13 +3,16 @@
 - name: Check if snap is installed
   ansible.builtin.command: snap version
   register: snap_installed
+  changed_when: false
   ignore_errors: true
 
 - name: Set fact if snap is installed
   ansible.builtin.set_fact:
     snap_installed_status: "{{ 'installed' if snap_installed.rc == 0 else 'not_installed' }}"
 
-- block:
+- name: Remove snap packages
+  when: snap_installed_status == 'installed'
+  block:
     - name: List all installed snaps
       become: true
       ansible.builtin.command: snap list
@@ -27,7 +30,7 @@
 
     - name: Remove snaps except core and snapd
       become: true
-      become_method: sudo
+      become_method: ansible.builtin.sudo
       community.general.snap:
         name: "{{ item }}"
         state: absent
@@ -38,7 +41,7 @@
 
     - name: Remove core and snapd snaps
       become: true
-      become_method: sudo
+      become_method: ansible.builtin.sudo
       community.general.snap:
         name: "{{ item }}"
         state: absent
@@ -60,7 +63,6 @@
       ansible.builtin.file:
         path: /var/cache/snapd/
         state: absent
-  when: snap_installed_status == 'installed'
 
 - name: Mark the package snapd on hold
   become: true
