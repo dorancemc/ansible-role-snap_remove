@@ -1,0 +1,69 @@
+---
+
+- name: Check if snap is installed
+  ansible.builtin.command: snap version
+  register: snap_installed
+  ignore_errors: true
+
+- name: Set fact if snap is installed
+  ansible.builtin.set_fact:
+    snap_installed_status: "{{ 'installed' if snap_installed.rc == 0 else 'not_installed' }}"
+
+- block:
+    - name: List all installed snaps
+      become: true
+      ansible.builtin.command: snap list
+      register: snap_list
+      changed_when: false
+
+    - name: Extract snap names
+      ansible.builtin.set_fact:
+        snap_names: "{{ snap_list.stdout_lines[1:] | map('split', ' ') | map(attribute='0') | list }}"
+
+    - name: Extract snap names
+      ansible.builtin.set_fact:
+        snaps_to_remove: "{{ snap_names | difference(['core', 'snapd']) }}"
+        snaps_to_remove_last: "{{ ['core', 'snapd'] | intersect(snap_names) }}"
+
+    - name: Remove snaps except core and snapd
+      become: true
+      become_method: sudo
+      community.general.snap:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ snaps_to_remove }}"
+      loop_control:
+        label: "{{ item }}"
+      when: snaps_to_remove | length > 0
+
+    - name: Remove core and snapd snaps
+      become: true
+      become_method: sudo
+      community.general.snap:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - core
+        - snapd
+      loop_control:
+        label: "{{ item }}"
+      when: snaps_to_remove_last | length > 0
+
+    - name: Remove snapd
+      become: true
+      ansible.builtin.apt:
+        name: snap*
+        state: absent
+
+    - name: Remove the directory /var/cache/snapd/
+      become: true
+      ansible.builtin.file:
+        path: /var/cache/snapd/
+        state: absent
+  when: snap_installed_status == 'installed'
+
+- name: Mark the package snapd on hold
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: snapd
+    selection: hold
