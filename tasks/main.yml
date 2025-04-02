@@ -55,7 +55,7 @@
     - name: Remove snapd
       become: true
       ansible.builtin.apt:
-        name: snap*
+        name: snapd
         state: absent
 
     - name: Remove the directory /var/cache/snapd/
